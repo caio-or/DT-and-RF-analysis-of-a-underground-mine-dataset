@@ -2,7 +2,7 @@ library(randomForest)
 library(Metrics)
 
 ## load data ##
-dados <- read.table("carvoaria.txt",header=TRUE,dec = ".")
+dados <- read.table("carvoaria_dataset.txt",header=TRUE,dec = ".")
 #the dataset should be changed to each orebody
 
 view(dados)
