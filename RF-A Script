@@ -1,0 +1,42 @@
+library(randomForest)
+
+## load data
+dados <- read.table("RF_dataset",header=TRUE,dec = ".")
+view(dados)
+summary(dados)
+boxplot(dados[,1:7])
+
+##scaling data
+x <- scale(dados[,1:6])
+boxplot(x)
+dados1 = data.frame(cbind(x,dados$Diluicao))
+View(dados1)
+
+##train teste partition
+#set.seed(0000)
+
+## RandomForest model 
+modelo_rf <- randomForest(dados1$V7 ~.,
+                          ntree=10000,
+                          mtry=6,
+                          nodesize=5,
+                          data=dados1,
+                          importance=TRUE,
+                          proximity=TRUE)
+view(modelo_rf)
+print(modelo_rf)
+plot(modelo_rf)
+varImpPlot(modelo_rf)
+
+
+## Prediction test ##
+pred<- predict(modelo_rf,dados1[,1:6])
+pred
+
+## RMSE ##
+predrmse = predict(modelo_rf,dados1)
+RMSE_treino = RMSE(predrmse,dados1$V7)
+RMSE_treino
+
+## Rsquare ##
+(cor(dados1$V7,pred))^2
