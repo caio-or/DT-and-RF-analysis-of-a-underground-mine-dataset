@@ -1,0 +1,61 @@
+library(randomForest)
+library(Metrics)
+
+## load data ##
+dados <- read.table("carvoaria.txt",header=TRUE,dec = ".")
+#the dataset should be changed to each orebody
+
+view(dados)
+summary(dados)
+boxplot(dados[,1:7])
+
+## scaling data
+x <- scale(dados[,1:6])
+boxplot(x)
+
+dados1 = data.frame(cbind(x,dados$Diluicao))
+View(dados1)
+
+## train test partition
+#set.seed(0000)
+
+train_idx <- sample(nrow(dados1), 0.9 * nrow(dados1))
+dados_treino <- dados1[train_idx, ]
+view(dados_train)
+dados_teste <- dados1[-train_idx, ]
+view(dados_test)
+
+dados_treino1 <- as.data.frame(dados_treino)
+dados_teste1 <- as.data.frame(dados_teste)
+
+## RandomForest model ##
+modelo_rf <- randomForest(dados_treino1$V7 ~.,
+                          ntree=10000, 
+                          mtry=6,
+                          nodesize=5,
+                          data=dados_treino1,
+                          importance=TRUE,
+                          proximity=TRUE)
+print(modelo_rf)
+plot(modelo_rf)
+
+## Variable Importance ##
+varImpPlot(modelo_rf)
+(round(importance(modelo_rf, type = 1), 2))
+view(round(importance(modelo_rf, type=1), 2))
+
+## Prediction test ##
+predteste <- predict(modelo_rf,dados_teste1)
+predtreino <- predict(modelo_rf,dados_treino1)
+
+## RMSE ##
+RMSE_treino = RMSE(predtreino,dados_treino1$V7)
+RMSE_treino
+RMSE_teste = RMSE(predteste,dados_teste1$V7)
+RMSE_teste
+
+## Rsquare ##
+rquadrado_treino = (cor(dados_treino1$V7,predtreino))^2
+rquadrado_treino
+rquadrado_teste =(cor(dados_teste1$V7,predteste))^2
+rquadrado_teste
