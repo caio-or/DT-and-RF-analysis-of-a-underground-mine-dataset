@@ -1,0 +1,99 @@
+library(plyr)
+library(rpart)
+library(rpart.plot)
+
+## data load
+dados <- read.table("DT_dataset",header=TRUE,dec = ".")
+
+#dados$Prof <- as.numeric(dados$Prof)
+#dados$Diluicao <- as.numeric(dados$Diluicao)
+
+dados
+str(dados)
+summary(dados)
+boxplot(dados)
+
+dados1 <- scale(dados[,1:26])
+#testar padronização apenas para variáveis independentes
+dados1
+boxplot(dados1[,1:26])
+
+#train teste partition
+#set.seed(0000)
+train_idx<- sample(nrow(dados1), 0.9*nrow(dados1)) #this value were changed during testes
+dados1_train<- dados1[train_idx, ]
+dados1_test<- dados1[-train_idx, ]
+
+treino<- as.data.frame(dados1_train)
+teste<- as.data.frame(dados1_test)
+
+#decision tree
+tree <- rpart(Diluicao ~., data = treino, method = "anova") 
+rpart(formula = Diluicao ~ ., data = treino) #shows the variables that were used on the model
+
+rpart.plot(tree) #tree visualization
+printcp(tree) #parameters description
+
+#variables importance
+tree$variable.importance 
+rpart.rules(tree)
+
+#prediction
+pred<- predict(tree,teste)
+
+#RMSE
+sqrt(mean((teste$Diluicao-pred)^2))
+
+#Rsquare
+(cor(teste$Diluicao,pred))^2
+
+#crating a for yo determine the best hyper parameters
+hyper_grid <- expand.grid(
+  minsplit = seq(5, 10, 1),
+  maxdepth = seq(1, 10, 1))
+nrow(hyper_grid)
+
+models <- list()
+
+for (i in 1:nrow(hyper_grid)) {
+  # inputar volores de minsplit, maxdepth na coluna i
+  minsplit <- hyper_grid$minsplit[i]
+  maxdepth <- hyper_grid$maxdepth[i]
+models[[i]] <- rpart(Diluicao ~., data = treino, method = "anova",
+               control = list(minsplit = minsplit, maxdepth = maxdepth, xval = 10))}
+
+  # function to obtain the best cp
+get_cp <- function(x) {
+  min    <- which.min(x$cptable[, "xerror"])
+  cp <- x$cptable[min, "CP"] }
+
+  # function to obtain minimum error
+get_min_error <- function(x) {
+  min    <- which.min(x$cptable[, "xerror"])
+  xerror <- x$cptable[min, "xerror"] }
+
+library(dplyr)
+
+hyper_grid %>%
+  mutate(cp    = purrr::map_dbl(models, get_cp),
+        error = purrr::map_dbl(models, get_min_error)) %>%
+        arrange(error) %>%
+        top_n(-5, wt = error)
+
+#Tunning model
+tree3 <- rpart(Diluicao ~., data = treino, method = "anova",
+               control = list(minsplit = 7, maxdepth = 2, cp = 0.23))
+
+tree3
+rpart.plot(tree3)
+printcp(tree3)
+plotcp(tree3)
+
+#prediction
+pred3<- predict(tree3,newdata=teste)
+
+#RMSE
+sqrt(mean((teste$Diluicao-pred3)^2))
+
+#Rsquare
+(cor(teste$Diluicao,pred3))^2
